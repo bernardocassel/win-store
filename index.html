@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WIN Store</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <style>
@@ -269,6 +271,9 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div id="sbadge-w" style="padding:7px 10px 2px"></div>
   <div class="nav" id="snav"></div>
   <div class="sfooter">
+    <div style="margin-bottom:8px">
+      <span id="sync-status" style="font-size:11px;color:var(--mut)">☁ iniciando...</span>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between">
       <small style="color:var(--gold);opacity:.5;letter-spacing:1px;font-size:10px">v5.0</small>
       <button class="btn bs bsm" id="btn-sair" onclick="doLogout()">Sair</button>
@@ -708,16 +713,115 @@ let DB = {
   vendedores: [] // {id, nome, login, senha, ativo}
 };
 
-function loadDB(){
+// ═══════════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════════
+const FB_CONFIG = {
+  apiKey: "AIzaSyClXffOhlIavADiNNHednGdq3rZnxCEcbg",
+  authDomain: "win-store-c96f9.firebaseapp.com",
+  databaseURL: "https://win-store-c96f9-default-rtdb.firebaseio.com",
+  projectId: "win-store-c96f9",
+  storageBucket: "win-store-c96f9.firebasestorage.app",
+  messagingSenderId: "41434274418",
+  appId: "1:41434274418:web:33fc40ccf2f10a7bd6c0eb"
+};
+
+let fbDB = null;   // Firebase database reference
+let fbRef = null;  // Root ref
+let fbConnected = false;
+
+function initFirebase(){
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    fbDB = firebase.database();
+    fbRef = fbDB.ref('winstore');
+    fbConnected = true;
+    showSyncStatus('conectando...');
+
+    // Ouvir mudanças em tempo real
+    fbRef.on('value', snap => {
+      const data = snap.val();
+      if(data){
+        DB.estoque    = data.estoque    || [];
+        DB.vendas     = data.vendas     || [];
+        DB.cobrancas  = data.cobrancas  || [];
+        DB.financeiro = data.financeiro || [];
+        DB.clientes   = data.clientes   || [];
+        DB.vendedores = data.vendedores || [];
+        // fallback local também
+        localStorage.setItem('winstore5', JSON.stringify(DB));
+        // atualizar tela se já logado
+        if(U) refreshCurrentPage();
+      }
+      showSyncStatus('sincronizado ✓', true);
+    }, err => {
+      console.warn('Firebase read error:', err);
+      showSyncStatus('offline — usando local', false, true);
+      loadLocalDB();
+    });
+
+  } catch(e){
+    console.warn('Firebase init error:', e);
+    fbConnected = false;
+    loadLocalDB();
+    showSyncStatus('offline — usando local', false, true);
+  }
+}
+
+function loadLocalDB(){
   try{
     const s = localStorage.getItem('winstore5');
     if(s){ const p=JSON.parse(s); Object.assign(DB,p); }
   }catch(e){}
   if(!DB.vendedores) DB.vendedores=[];
-  if(!DB.clientes) DB.clientes=[];
+  if(!DB.clientes)   DB.clientes=[];
 }
+
+function loadDB(){
+  // chamado no boot — Firebase cuida do resto via listener
+  loadLocalDB();
+}
+
 function saveDB(){
+  // Salvar local sempre (fallback)
   localStorage.setItem('winstore5', JSON.stringify(DB));
+  // Salvar no Firebase se conectado
+  if(fbConnected && fbRef){
+    showSyncStatus('salvando...');
+    fbRef.set({
+      estoque:    DB.estoque,
+      vendas:     DB.vendas,
+      cobrancas:  DB.cobrancas,
+      financeiro: DB.financeiro,
+      clientes:   DB.clientes,
+      vendedores: DB.vendedores
+    }).then(()=>{
+      showSyncStatus('sincronizado ✓', true);
+    }).catch(err=>{
+      console.warn('Firebase save error:', err);
+      showSyncStatus('erro ao salvar — dados locais ok', false, true);
+    });
+  }
+}
+
+function showSyncStatus(msg, ok=false, warn=false){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent = '☁ ' + msg;
+  el.style.color = warn ? 'var(--red)' : ok ? 'var(--grn)' : 'var(--mut)';
+}
+
+function refreshCurrentPage(){
+  const active = document.querySelector('.page.active');
+  if(!active) return;
+  const id = active.id.replace('page-','');
+  const fns={
+    'dashboard':renderDash,'meu-dash':renderMeuDash,'estoque':renderEstoque,
+    'cobrancas':()=>renderCob(cobFiltro),'clientes':renderClientes,
+    'financeiro':renderFin,'relatorios':renderRel,'equipe':renderEquipe
+  };
+  if(fns[id]) fns[id]();
+  updateBadges();
 }
 
 // ═══════════════════════════════════════════════
@@ -1645,6 +1749,11 @@ function initApp(){
 
 // ── BOOT ──
 loadDB();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initFirebase);
+} else {
+  initFirebase();
+}
 </script>
 </body>
 </html>
