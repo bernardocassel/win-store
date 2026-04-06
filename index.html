@@ -353,7 +353,10 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <button class="btn bp" onclick="setModoCompra('compra');goPage('compra')">🛍️ Nova Compra</button>
     </div>
   </div>
-  <div class="tw"><table><thead><tr><th>Produto</th><th>Variação</th><th>Qtd</th><th>Custo</th><th>Venda</th><th>Markup</th><th>Status</th></tr></thead><tbody id="estoque-tb"></tbody></table></div>
+  <div style="margin-bottom:14px">
+    <input type="text" id="est-busca" placeholder="🔍 Buscar por nome, cor, tamanho, fornecedor..." oninput="renderEstoque()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:9px 13px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:100%;max-width:420px;"/>
+  </div>
+  <div class="tw"><table><thead><tr><th>Produto</th><th>Variação</th><th>Qtd</th><th>Custo</th><th>Venda</th><th>Markup</th><th>Status</th><th></th></tr></thead><tbody id="estoque-tb"></tbody></table></div>
 </div>
 
 <!-- COMPRA -->
@@ -734,6 +737,34 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div class="macts">
     <button class="btn bs" onclick="closeMo('mo-fin')">Cancelar</button>
     <button class="btn bp" onclick="salvarFin()">💾 Salvar</button>
+  </div>
+</div></div>
+
+<!-- MODAL EDITAR ESTOQUE -->
+<div class="mo" id="mo-estoque"><div class="md" style="max-width:500px">
+  <h3 id="me-title">✏️ Editar Item do Estoque</h3>
+  <div class="fgrid">
+    <div class="fg" style="grid-column:1/-1"><label>Nome do Produto</label><input type="text" id="me-nome" placeholder="Nome..."/></div>
+    <div class="fg"><label>Categoria</label>
+      <select id="me-cat">
+        <option value="camisa">Camisa</option><option value="calca">Calça</option>
+        <option value="vestido">Vestido</option><option value="shorts">Shorts</option>
+        <option value="jaqueta">Jaqueta</option><option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="fg"><label>Cor</label><input type="text" id="me-cor" placeholder="Cor..."/></div>
+    <div class="fg"><label>Tamanho</label><input type="text" id="me-tam" placeholder="Tamanho..."/></div>
+    <div class="fg"><label>Quantidade em Estoque</label><input type="number" id="me-qtd" placeholder="0" min="0"/></div>
+    <div class="fg"><label>Custo Unitário (R$)</label><input type="number" id="me-custo" placeholder="0,00" step="0.01" min="0"/></div>
+    <div class="fg"><label>Preço de Venda (R$)</label><input type="number" id="me-venda" placeholder="0,00" step="0.01" min="0"/></div>
+    <div class="fg"><label>Fornecedor</label><input type="text" id="me-forn" placeholder="Fornecedor..."/></div>
+  </div>
+  <!-- preview markup -->
+  <div id="me-markup-preview" style="margin-top:12px;padding:10px 14px;background:var(--surf2);border-radius:var(--rs);font-size:12px;color:var(--mut)"></div>
+  <div class="macts">
+    <button class="btn bd" onclick="excluirItemEstoque()">🗑 Excluir Item</button>
+    <button class="btn bs" onclick="closeMo('mo-estoque')">Cancelar</button>
+    <button class="btn bp" onclick="salvarEdicaoEstoque()">💾 Salvar</button>
   </div>
 </div></div>
 
@@ -1118,19 +1149,106 @@ function renderMeuDash(){
 // ═══════════════════════════════════════════════
 function renderEstoque(){
   const tb=document.getElementById('estoque-tb');
-  if(!DB.estoque.length){tb.innerHTML='<tr><td colspan="7" class="empty">Sem produtos.</td></tr>';return;}
-  tb.innerHTML=DB.estoque.map(e=>{
+  const busca=(document.getElementById('est-busca')?.value||'').toLowerCase();
+  const lista = busca
+    ? DB.estoque.filter(e=>e.nome.toLowerCase().includes(busca)||e.cor.toLowerCase().includes(busca)||e.tamanho.toLowerCase().includes(busca)||e.fornecedor?.toLowerCase().includes(busca))
+    : DB.estoque;
+  if(!lista.length){
+    tb.innerHTML=`<tr><td colspan="8" class="empty">${busca?'Nenhum produto encontrado.':'Sem produtos no estoque.'}</td></tr>`;
+    return;
+  }
+  tb.innerHTML=lista.map(e=>{
     const mk=e.custo>0?(((e.venda-e.custo)/e.custo)*100).toFixed(0):0;
     const st=e.quantidade===0?'danger':e.quantidade<=3?'warn':'ok';
     return `<tr class="${e.quantidade<=3?'lowstock':''}">
-      <td><strong>${e.nome}</strong><br><small style="color:var(--mut)">${e.categoria} · ${e.fornecedor}</small></td>
-      <td>${e.cor}/${e.tamanho}</td><td><strong>${e.quantidade}</strong></td>
+      <td><strong>${e.nome}</strong><br><small style="color:var(--mut)">${e.categoria} · ${e.fornecedor||'—'}</small></td>
+      <td>${e.cor} / ${e.tamanho}</td>
+      <td><strong>${e.quantidade}</strong></td>
       <td style="color:var(--ora)">${fmt(e.custo)}</td>
       <td style="color:var(--gold)">${fmt(e.venda)}</td>
       <td style="color:var(--grn)">${mk}%</td>
       <td><span class="badge b${st==='danger'?'danger':st==='warn'?'warn':'ok'}">${e.quantidade===0?'Sem estoque':e.quantidade<=3?'Baixo':'OK'}</span></td>
+      <td style="display:flex;gap:5px;white-space:nowrap">
+        <button class="btn bi bsm" onclick="abrirEditarEstoque('${e.id}')">✏️</button>
+        <button class="btn bd bsm" onclick="confirmarExcluirEstoque('${e.id}','${e.nome} (${e.cor}/${e.tamanho})')">🗑</button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+let editEstoqueId = null;
+
+function abrirEditarEstoque(id){
+  const e = DB.estoque.find(x=>String(x.id)===String(id));
+  if(!e) return;
+  editEstoqueId = id;
+  document.getElementById('me-title').textContent = '✏️ Editar — ' + e.nome + ' ('+e.cor+'/'+e.tamanho+')';
+  document.getElementById('me-nome').value  = e.nome||'';
+  document.getElementById('me-cat').value   = e.categoria||'outro';
+  document.getElementById('me-cor').value   = e.cor||'';
+  document.getElementById('me-tam').value   = e.tamanho||'';
+  document.getElementById('me-qtd').value   = e.quantidade||0;
+  document.getElementById('me-custo').value = e.custo||0;
+  document.getElementById('me-venda').value = e.venda||0;
+  document.getElementById('me-forn').value  = e.fornecedor||'';
+  atualizarPreviewMarkup();
+  // Listeners para preview ao vivo
+  ['me-custo','me-venda'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.oninput = atualizarPreviewMarkup;
+  });
+  document.getElementById('mo-estoque').classList.add('open');
+}
+
+function atualizarPreviewMarkup(){
+  const custo = parseFloat(document.getElementById('me-custo')?.value)||0;
+  const venda = parseFloat(document.getElementById('me-venda')?.value)||0;
+  const mk = custo>0 ? (((venda-custo)/custo)*100).toFixed(1) : 0;
+  const lucro = venda - custo;
+  const el = document.getElementById('me-markup-preview');
+  if(el) el.innerHTML = `Markup: <strong style="color:var(--grn)">${mk}%</strong> &nbsp;|&nbsp; Lucro unitário: <strong style="color:var(--grn)">${fmt(lucro)}</strong>`;
+}
+
+function salvarEdicaoEstoque(){
+  const e = DB.estoque.find(x=>String(x.id)===String(editEstoqueId));
+  if(!e){ toast('Item não encontrado','err'); return; }
+  const nome  = document.getElementById('me-nome').value.trim();
+  const qtd   = parseInt(document.getElementById('me-qtd').value)||0;
+  const custo = parseFloat(document.getElementById('me-custo').value)||0;
+  const venda = parseFloat(document.getElementById('me-venda').value)||0;
+  if(!nome){ toast('Informe o nome','err'); return; }
+  if(qtd < 0){ toast('Quantidade não pode ser negativa','err'); return; }
+  e.nome       = nome;
+  e.categoria  = document.getElementById('me-cat').value;
+  e.cor        = document.getElementById('me-cor').value.trim();
+  e.tamanho    = document.getElementById('me-tam').value.trim();
+  e.quantidade = qtd;
+  e.custo      = custo;
+  e.venda      = venda;
+  e.fornecedor = document.getElementById('me-forn').value.trim();
+  saveDB();
+  closeMo('mo-estoque');
+  renderEstoque();
+  toast('✅ Item atualizado!');
+}
+
+function confirmarExcluirEstoque(id, nome){
+  if(!confirm(`Excluir "${nome}" do estoque?\n\nEsta ação não pode ser desfeita.`)) return;
+  DB.estoque = DB.estoque.filter(x=>String(x.id)!==String(id));
+  saveDB();
+  renderEstoque();
+  toast('🗑 Item excluído do estoque');
+}
+
+function excluirItemEstoque(){
+  const e = DB.estoque.find(x=>String(x.id)===String(editEstoqueId));
+  if(!e) return;
+  if(!confirm(`Excluir "${e.nome} (${e.cor}/${e.tamanho})" do estoque?\n\nEsta ação não pode ser desfeita.`)) return;
+  DB.estoque = DB.estoque.filter(x=>String(x.id)!==String(editEstoqueId));
+  saveDB();
+  closeMo('mo-estoque');
+  renderEstoque();
+  toast('🗑 Item excluído do estoque');
 }
 
 // ═══════════════════════════════════════════════
