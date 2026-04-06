@@ -347,29 +347,80 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
 <!-- ESTOQUE -->
 <div class="page" id="page-estoque">
-  <div class="ph"><div><h2>Estoque</h2></div><button class="btn bp" onclick="goPage('compra')">+ Comprar</button></div>
+  <div class="ph"><div><h2>Estoque</h2></div>
+    <div class="phacts">
+      <button class="btn bs" onclick="setModoCompra('cadastro');goPage('compra')">📦 Cadastrar</button>
+      <button class="btn bp" onclick="setModoCompra('compra');goPage('compra')">🛍️ Nova Compra</button>
+    </div>
+  </div>
   <div class="tw"><table><thead><tr><th>Produto</th><th>Variação</th><th>Qtd</th><th>Custo</th><th>Venda</th><th>Markup</th><th>Status</th></tr></thead><tbody id="estoque-tb"></tbody></table></div>
 </div>
 
 <!-- COMPRA -->
 <div class="page" id="page-compra">
-  <div class="ph"><div><h2>Compra de Estoque</h2></div></div>
+  <div class="ph"><div><h2>Estoque</h2><small>Cadastrar ou registrar nova compra</small></div></div>
+
+  <!-- TABS MODO -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px">
+    <div id="tab-cadastro" onclick="setModoCompra('cadastro')" style="background:var(--gold);color:#111;border-radius:var(--r);padding:18px 20px;cursor:pointer;transition:all .2s">
+      <div style="font-size:22px;margin-bottom:6px">📦</div>
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px">Cadastrar Estoque</div>
+      <div style="font-size:12px;opacity:.7">Produto que você já tem. Só registrar no sistema, sem lançar no financeiro.</div>
+    </div>
+    <div id="tab-compra" onclick="setModoCompra('compra')" style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:18px 20px;cursor:pointer;transition:all .2s">
+      <div style="font-size:22px;margin-bottom:6px">🛍️</div>
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px">Nova Compra</div>
+      <div style="font-size:12px;color:var(--mut)">Comprou agora. Entra no estoque e lança automaticamente como saída no financeiro.</div>
+    </div>
+  </div>
+
+  <!-- CAMPOS EXCLUSIVOS DA COMPRA NOVA -->
+  <div id="compra-nova-fields" style="display:none">
+    <div class="fsec" style="border:1px solid rgba(224,80,96,.25);background:rgba(224,80,96,.04)">
+      <h3 style="color:var(--red)">🧾 Dados da Compra</h3>
+      <div class="fgrid">
+        <div class="fg"><label>Fornecedor / Loja</label><input type="text" id="cn-forn" placeholder="Nome do fornecedor..."/></div>
+        <div class="fg"><label>Data da Compra</label><input type="date" id="cn-data"/></div>
+        <div class="fg"><label>Forma de Pagamento</label>
+          <select id="cn-pag">
+            <option value="dinheiro">Dinheiro</option>
+            <option value="pix">PIX</option>
+            <option value="cartao">Cartão</option>
+            <option value="boleto">Boleto</option>
+            <option value="prazo">A prazo</option>
+          </select>
+        </div>
+        <div class="fg"><label>Nota / Observação</label><input type="text" id="cn-obs" placeholder="Nº nota, referência..."/></div>
+      </div>
+      <div style="margin-top:12px;padding:10px 14px;background:var(--surf2);border-radius:var(--rs);font-size:12px;color:var(--mut)">
+        💡 O valor total da compra será calculado automaticamente com base nos custos e quantidades das variações e lançado como <strong style="color:var(--red)">saída no Financeiro</strong>.
+      </div>
+    </div>
+  </div>
+
   <div class="fsec">
     <h3>📦 Produto</h3>
     <div class="fgrid">
       <div class="fg"><label>Nome</label><input type="text" id="cp-nome" placeholder="ex: Camisa Básica"/></div>
-      <div class="fg"><label>Categoria</label><select id="cp-cat"><option value="camisa">Camisa</option><option value="calca">Calça</option><option value="vestido">Vestido</option><option value="shorts">Shorts</option><option value="jaqueta">Jaqueta</option><option value="outro">Outro</option></select></div>
-      <div class="fg"><label>Custo (R$)</label><input type="number" id="cp-custo" placeholder="0,00" step="0.01" min="0"/></div>
-      <div class="fg"><label>Venda (R$)</label><input type="number" id="cp-venda" placeholder="0,00" step="0.01" min="0"/></div>
-      <div class="fg"><label>Fornecedor</label><input type="text" id="cp-forn" placeholder="Nome..."/></div>
+      <div class="fg"><label>Categoria</label>
+        <select id="cp-cat">
+          <option value="camisa">Camisa</option><option value="calca">Calça</option>
+          <option value="vestido">Vestido</option><option value="shorts">Shorts</option>
+          <option value="jaqueta">Jaqueta</option><option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="fg"><label>Custo unitário (R$)</label><input type="number" id="cp-custo" placeholder="0,00" step="0.01" min="0" oninput="calcTotalCompra()"/></div>
+      <div class="fg"><label>Preço de Venda (R$)</label><input type="number" id="cp-venda" placeholder="0,00" step="0.01" min="0"/></div>
+      <div class="fg" id="cp-forn-wrap"><label>Fornecedor</label><input type="text" id="cp-forn" placeholder="Nome..."/></div>
     </div>
   </div>
+
   <div class="fsec">
     <h3>🎨 Variações</h3>
     <div class="fgrid" style="margin-bottom:11px">
       <div class="fg"><label>Cor</label><input type="text" id="v-cor" placeholder="ex: Preto, Azul..."/></div>
       <div class="fg"><label>Tamanho</label><input type="text" id="v-tam" placeholder="ex: PP, P, M, G, GG, 38..."/></div>
-      <div class="fg"><label>Quantidade</label><input type="number" id="v-qtd" placeholder="0" min="1"/></div>
+      <div class="fg"><label>Quantidade</label><input type="number" id="v-qtd" placeholder="0" min="1" oninput="calcTotalCompra()"/></div>
       <div class="fg" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn bs" onclick="addVar()">+ Adicionar</button></div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px">
@@ -381,9 +432,18 @@ tr:hover td{background:rgba(255,255,255,.02);}
     </div>
     <div id="vlist" style="display:flex;flex-wrap:wrap;gap:6px"></div>
   </div>
+
+  <!-- TOTAL COMPRA (só no modo compra nova) -->
+  <div id="compra-total-wrap" style="display:none;margin-bottom:16px">
+    <div style="background:var(--surf);border:1px solid rgba(224,80,96,.25);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:var(--mut);font-size:13px">Total da Compra (será lançado no financeiro):</span>
+      <strong id="compra-total-val" style="font-family:'Syne',sans-serif;font-size:22px;color:var(--red)">R$ 0,00</strong>
+    </div>
+  </div>
+
   <div style="display:flex;gap:8px;justify-content:flex-end">
     <button class="btn bs" onclick="clearCompra()">Limpar</button>
-    <button class="btn bp" onclick="salvarCompra()">💾 Salvar Estoque</button>
+    <button class="btn bp" id="btn-salvar-compra" onclick="salvarCompra()">💾 Cadastrar Estoque</button>
   </div>
 </div>
 
@@ -930,6 +990,7 @@ function goPage(id){
   document.querySelector(`.ni[data-p="${id}"]`)?.classList.add('active');
   const fns={
     'dashboard':renderDash,'meu-dash':renderMeuDash,'estoque':renderEstoque,
+    'compra':()=>{ novasVars=[]; renderVarList(); calcTotalCompra(); },
     'pdv':initPDV,'cobrancas':()=>renderCob('pendente'),'clientes':renderClientes,
     'financeiro':renderFin,'etiquetas':initEtq,'relatorios':renderRel,'equipe':renderEquipe
   };
@@ -1075,6 +1136,57 @@ function renderEstoque(){
 // ═══════════════════════════════════════════════
 // COMPRA ESTOQUE
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// COMPRA ESTOQUE
+// ═══════════════════════════════════════════════
+let modoCompra = 'cadastro'; // 'cadastro' | 'compra'
+
+function setModoCompra(modo){
+  modoCompra = modo;
+  const tc = document.getElementById('tab-cadastro');
+  const tn = document.getElementById('tab-compra');
+  const cnf = document.getElementById('compra-nova-fields');
+  const ctw = document.getElementById('compra-total-wrap');
+  const btn = document.getElementById('btn-salvar-compra');
+  const fornWrap = document.getElementById('cp-forn-wrap');
+  if(modo === 'compra'){
+    tc.style.background='var(--surf)';tc.style.border='1px solid var(--bord)';
+    tc.querySelector('div:nth-child(2)').style.color='var(--txt)';
+    tc.querySelector('div:nth-child(3)').style.color='var(--mut)';
+    tn.style.background='var(--red)';tn.style.border='1px solid var(--red)';tn.style.color='#fff';
+    tn.querySelector('div:nth-child(2)').style.color='#fff';
+    tn.querySelector('div:nth-child(3)').style.color='rgba(255,255,255,.75)';
+    cnf.style.display='block';
+    ctw.style.display='block';
+    fornWrap.style.display='none'; // fornecedor já está no bloco de compra
+    btn.textContent='🛍️ Registrar Compra';
+    btn.style.background='var(--red)';btn.style.color='#fff';
+    document.getElementById('cn-data').value = new Date().toISOString().slice(0,10);
+  } else {
+    tc.style.background='var(--gold)';tc.style.border='none';tc.style.color='#111';
+    tc.querySelector('div:nth-child(2)').style.color='#111';
+    tc.querySelector('div:nth-child(3)').style.color='rgba(0,0,0,.6)';
+    tn.style.background='var(--surf)';tn.style.border='1px solid var(--bord)';tn.style.color='var(--txt)';
+    tn.querySelector('div:nth-child(2)').style.color='var(--txt)';
+    tn.querySelector('div:nth-child(3)').style.color='var(--mut)';
+    cnf.style.display='none';
+    ctw.style.display='none';
+    fornWrap.style.display='block';
+    btn.textContent='💾 Cadastrar Estoque';
+    btn.style.background='var(--gold)';btn.style.color='#111';
+  }
+  calcTotalCompra();
+}
+
+function calcTotalCompra(){
+  if(modoCompra !== 'compra') return;
+  const custo = parseFloat(document.getElementById('cp-custo')?.value)||0;
+  const totalUnid = novasVars.reduce((a,v)=>a+v.quantidade,0);
+  const total = custo * totalUnid;
+  const el = document.getElementById('compra-total-val');
+  if(el) el.textContent = fmt(total);
+}
+
 function addVar(){
   const cor=document.getElementById('v-cor').value.trim();
   const tam=document.getElementById('v-tam').value.trim();
@@ -1082,39 +1194,67 @@ function addVar(){
   if(!cor||!tam||qtd<=0){toast('Preencha cor, tamanho e qtd','err');return;}
   novasVars.push({cor,tamanho:tam,quantidade:qtd});
   ['v-cor','v-tam','v-qtd'].forEach(id=>document.getElementById(id).value='');
-  renderVarList();
+  renderVarList();calcTotalCompra();
 }
 function tamGrp(ts){
   const cor=document.getElementById('v-cor').value.trim()||'A definir';
   const qtd=parseInt(document.getElementById('v-qtd').value)||1;
   ts.split(',').forEach(t=>novasVars.push({cor,tamanho:t.trim(),quantidade:qtd}));
-  renderVarList();
+  renderVarList();calcTotalCompra();
 }
 function renderVarList(){
   document.getElementById('vlist').innerHTML=novasVars.map((v,i)=>
-    `<div class="vchip sel">${v.cor}/${v.tamanho}—${v.quantidade}un <span class="rm" onclick="novasVars.splice(${i},1);renderVarList()">✕</span></div>`).join('');
+    `<div class="vchip sel">${v.cor}/${v.tamanho}—${v.quantidade}un <span class="rm" onclick="novasVars.splice(${i},1);renderVarList();calcTotalCompra()">✕</span></div>`).join('');
 }
 function clearCompra(){
-  ['cp-nome','cp-custo','cp-venda','cp-forn','v-cor','v-tam','v-qtd'].forEach(id=>document.getElementById(id).value='');
+  ['cp-nome','cp-custo','cp-venda','cp-forn','v-cor','v-tam','v-qtd','cn-forn','cn-obs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('cp-cat').value='camisa';
-  novasVars=[];renderVarList();
+  novasVars=[];renderVarList();calcTotalCompra();
 }
 function salvarCompra(){
   const nome=document.getElementById('cp-nome').value.trim();
   const cat=document.getElementById('cp-cat').value;
   const custo=parseFloat(document.getElementById('cp-custo').value)||0;
   const venda=parseFloat(document.getElementById('cp-venda').value)||0;
-  const forn=document.getElementById('cp-forn').value.trim()||'Sem fornecedor';
-  if(!nome){toast('Informe o nome','err');return;}
-  if(!novasVars.length){toast('Adicione variações','err');return;}
-  let count=0;
+  if(!nome){toast('Informe o nome do produto','err');return;}
+  if(!novasVars.length){toast('Adicione ao menos uma variação','err');return;}
+
+  // Fornecedor: vem do campo principal (cadastro) ou do bloco de compra nova
+  const forn = modoCompra==='compra'
+    ? (document.getElementById('cn-forn').value.trim()||'Fornecedor não informado')
+    : (document.getElementById('cp-forn').value.trim()||'Sem fornecedor');
+
+  let totalUnidades=0, totalCusto=0;
   novasVars.forEach(v=>{
     const ex=DB.estoque.find(e=>e.nome===nome&&e.cor===v.cor&&e.tamanho===v.tamanho);
-    if(ex){ex.quantidade+=v.quantidade;ex.custo=custo;ex.venda=venda;}
+    if(ex){ex.quantidade+=v.quantidade;ex.custo=custo;ex.venda=venda;ex.fornecedor=forn;}
     else DB.estoque.push({id:Date.now()+Math.random(),nome,categoria:cat,cor:v.cor,tamanho:v.tamanho,quantidade:v.quantidade,custo,venda,fornecedor:forn});
-    count+=v.quantidade;
+    totalUnidades+=v.quantidade;
+    totalCusto+=custo*v.quantidade;
   });
-  saveDB();toast(`✅ ${count} unidades adicionadas!`);clearCompra();
+
+  // Se for compra nova → lançar automaticamente no financeiro
+  if(modoCompra==='compra'){
+    const dataCn=document.getElementById('cn-data').value||new Date().toISOString().slice(0,10);
+    const pagCn=document.getElementById('cn-pag').value;
+    const obsCn=document.getElementById('cn-obs').value.trim();
+    const pagLabels={dinheiro:'Dinheiro',pix:'PIX',cartao:'Cartão',boleto:'Boleto',prazo:'A prazo'};
+    DB.financeiro.push({
+      id:Date.now(),
+      desc:`Compra: ${nome} (${totalUnidades} unid.) — ${forn}`,
+      tipo:'saida',
+      cat:'Compra Mercadoria',
+      valor:totalCusto,
+      data:dataCn,
+      obs:`Pag: ${pagLabels[pagCn]||pagCn}${obsCn?' | '+obsCn:''}`
+    });
+    saveDB();
+    toast(`✅ ${totalUnidades} unidades adicionadas + lançamento de ${fmt(totalCusto)} no financeiro!`);
+  } else {
+    saveDB();
+    toast(`✅ ${totalUnidades} unidades cadastradas no estoque!`);
+  }
+  clearCompra();
 }
 
 // ═══════════════════════════════════════════════
