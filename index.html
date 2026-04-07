@@ -569,6 +569,30 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div class="tw"><table><thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>CPF</th><th>Cidade</th><th>Compras</th><th>Total Gasto</th><th></th></tr></thead><tbody id="cli-tb"></tbody></table></div>
 </div>
 
+<!-- VENDAS -->
+<div class="page" id="page-vendas">
+  <div class="ph">
+    <div><h2>Vendas</h2><small id="vendas-count"></small></div>
+    <div class="phacts">
+      <select id="vendas-per" onchange="renderVendas()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:7px 11px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;">
+        <option value="hoje">Hoje</option>
+        <option value="7">7 dias</option>
+        <option value="30" selected>30 dias</option>
+        <option value="90">90 dias</option>
+        <option value="todos">Todas</option>
+      </select>
+      <input type="text" id="vendas-busca" placeholder="🔍 Buscar..." oninput="renderVendas()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:7px 11px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;width:200px;"/>
+    </div>
+  </div>
+  <div class="cards" id="vendas-cards"></div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Data/Hora</th><th>Vendedor</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Total</th><th>Lucro</th><th></th></tr></thead>
+      <tbody id="vendas-tb"></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- FINANCEIRO -->
 <div class="page" id="page-financeiro">
   <div class="ph"><div><h2>Financeiro</h2></div><button class="btn bp" onclick="openFinModal()">+ Lançamento</button></div>
@@ -577,6 +601,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <div class="tab active" onclick="filFin('todas',this)">📋 Todas</div>
     <div class="tab" onclick="filFin('entrada',this)">📥 Entradas</div>
     <div class="tab" onclick="filFin('saida',this)">📤 Saídas</div>
+    <div class="tab" onclick="filFin('vendas',this)">🛒 Vendas</div>
   </div>
   <div class="tw" style="margin-bottom:16px"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th></th></tr></thead><tbody id="fin-tb"></tbody></table></div>
   <div class="ccard"><h3>Fluxo de Caixa — 10 dias</h3><canvas id="chartFin" style="max-height:200px"></canvas></div>
@@ -978,6 +1003,7 @@ function refreshCurrentPage(){
   const id = active.id.replace('page-','');
   const fns={
     'dashboard':renderDash,'meu-dash':renderMeuDash,'estoque':renderEstoque,
+    'vendas':renderVendas,
     'cobrancas':()=>renderCob(cobFiltro),'clientes':renderClientes,
     'financeiro':renderFin,'relatorios':renderRel,'equipe':renderEquipe
   };
@@ -1057,6 +1083,7 @@ function buildSidebar(){
     {id:'estoque',ic:'📦',lb:'Estoque'},
     {id:'compra',ic:'🛍️',lb:'Compra Estoque'},
     {id:'pdv',ic:'🛒',lb:'Frente de Caixa'},
+    {id:'vendas',ic:'💵',lb:'Vendas'},
     {id:'cobrancas',ic:'💳',lb:'Cobranças',badge:'cob-badge'},
     {id:'clientes',ic:'👥',lb:'Clientes'},
     {id:'financeiro',ic:'💰',lb:'Financeiro'},
@@ -1092,6 +1119,7 @@ function goPage(id){
   const fns={
     'dashboard':renderDash,'meu-dash':renderMeuDash,'estoque':renderEstoque,
     'compra':()=>{ novasVars=[]; renderVarList(); calcTotalCompra(); },
+    'vendas':renderVendas,
     'pdv':initPDV,'cobrancas':()=>renderCob('pendente'),'clientes':renderClientes,
     'financeiro':renderFin,'etiquetas':initEtq,'relatorios':renderRel,'equipe':renderEquipe
   };
@@ -1866,33 +1894,164 @@ function salvarFin(){
   saveDB();closeMo('mo-fin');renderFin();
   toast(tipo==='entrada'?'📥 Entrada!':'📤 Saída!');
 }
-function filFin(f,el){finFiltro=f;document.querySelectorAll('#page-financeiro .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderFin();}
+function filFin(f,el){
+  finFiltro=f;
+  document.querySelectorAll('#page-financeiro .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderFin();
+}
+// ═══════════════════════════════════════════════
+// VENDAS
+// ═══════════════════════════════════════════════
+function renderVendas(){
+  const per = document.getElementById('vendas-per')?.value||'30';
+  const busca = (document.getElementById('vendas-busca')?.value||'').toLowerCase();
+  let vendas = [...DB.vendas];
+  // Filtro período
+  if(per === 'hoje'){
+    const hoje = new Date().toISOString().slice(0,10);
+    vendas = vendas.filter(v=>v.data.startsWith(hoje));
+  } else if(per !== 'todos'){
+    const corte = new Date(); corte.setDate(corte.getDate()-parseInt(per));
+    vendas = vendas.filter(v=>new Date(v.data)>=corte);
+  }
+  // Filtro busca
+  if(busca) vendas = vendas.filter(v=>
+    (v.cliente||'').toLowerCase().includes(busca) ||
+    (v.vendedor||'').toLowerCase().includes(busca) ||
+    (v.pagamento||'').toLowerCase().includes(busca)
+  );
+  // Ordenar mais recentes primeiro
+  vendas.sort((a,b)=>b.data.localeCompare(a.data));
+
+  const tot = vendas.reduce((a,v)=>a+v.total,0);
+  const cus = vendas.reduce((a,v)=>a+v.custo,0);
+  const lucro = tot-cus;
+
+  document.getElementById('vendas-count').textContent = `${vendas.length} venda(s) encontrada(s)`;
+  document.getElementById('vendas-cards').innerHTML = `
+    <div class="card c1"><div class="cl">Receita Total</div><div class="cv">${fmt(tot)}</div></div>
+    <div class="card c2"><div class="cl">Custo Total</div><div class="cv">${fmt(cus)}</div></div>
+    <div class="card c3"><div class="cl">Lucro</div><div class="cv">${fmt(lucro)}</div></div>
+    <div class="card c4"><div class="cl">Nº de Vendas</div><div class="cv">${vendas.length}</div></div>
+    <div class="card c1"><div class="cl">Ticket Médio</div><div class="cv">${fmt(vendas.length?tot/vendas.length:0)}</div></div>`;
+
+  const tb = document.getElementById('vendas-tb');
+  if(!vendas.length){ tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma venda encontrada</td></tr>'; return; }
+
+  tb.innerHTML = vendas.map(v=>{
+    const l = v.total-v.custo;
+    const adminBtns = isAdmin()?`
+      <button class="btn bi bsm" onclick="abrirEditarVenda('${v.id}')" title="Editar">✏️</button>
+      <button class="btn bd bsm" onclick="excluirVendaDireto('${v.id}')" title="Excluir">🗑</button>`:'';
+    return `<tr>
+      <td style="white-space:nowrap">
+        ${new Date(v.data).toLocaleDateString('pt-BR')}<br>
+        <small style="color:var(--mut)">${new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</small>
+        ${v.retroativo?'<br><span class="badge bwarn" style="font-size:9px">Retroativa</span>':''}
+        ${v.editadoEm?'<br><span class="badge bblu" style="font-size:9px">Editada</span>':''}
+      </td>
+      <td style="color:var(--grn)">${v.vendedor||'—'}</td>
+      <td>${v.cliente||'—'}</td>
+      <td style="font-size:12px;color:var(--mut)">${(v.itens||[]).map(i=>i.nome+' ('+i.tamanho+') ×'+i.qty).join('<br>')}</td>
+      <td><span class="badge bok">${(v.pagamento||'').toUpperCase()}</span>${v.parcelas>1?'<br><small style="color:var(--mut)">'+v.parcelas+'x '+fmt(v.total/v.parcelas)+'</small>':''}</td>
+      <td style="color:var(--gold);font-weight:700">${fmt(v.total)}</td>
+      <td style="color:${l>=0?'var(--ok)':'var(--red)'}">
+        ${fmt(l)}<br><small style="color:var(--mut)">${tot>0?((l/v.total)*100).toFixed(0):0}%</small>
+      </td>
+      <td style="display:flex;gap:4px;white-space:nowrap">
+        <button class="btn bi bsm" onclick="comprovante('${v.id}')" title="Comprovante">🖨</button>
+        ${adminBtns}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
 function renderFin(){
-  const ent=DB.financeiro.filter(f=>f.tipo==='entrada').reduce((a,f)=>a+f.valor,0);
-  const sai=DB.financeiro.filter(f=>f.tipo==='saida').reduce((a,f)=>a+f.valor,0);
+  // Saldo do financeiro manual
+  const entMan = DB.financeiro.filter(f=>f.tipo==='entrada').reduce((a,f)=>a+f.valor,0);
+  const sai    = DB.financeiro.filter(f=>f.tipo==='saida').reduce((a,f)=>a+f.valor,0);
+  // Entradas de vendas
+  const entVen = DB.vendas.reduce((a,v)=>a+v.total,0);
+  const totalEnt = entMan + entVen;
+
   document.getElementById('fin-cards').innerHTML=`
-    <div class="card c3"><div class="cl">Entradas</div><div class="cv">${fmt(ent)}</div></div>
+    <div class="card c3"><div class="cl">Entradas (manual)</div><div class="cv">${fmt(entMan)}</div></div>
+    <div class="card c1"><div class="cl">Entradas (vendas)</div><div class="cv">${fmt(entVen)}</div></div>
     <div class="card c2"><div class="cl">Saídas</div><div class="cv">${fmt(sai)}</div></div>
-    <div class="card ${ent-sai>=0?'c3':'c2'}"><div class="cl">Saldo</div><div class="cv">${fmt(ent-sai)}</div></div>
-    <div class="card c4"><div class="cl">Lançamentos</div><div class="cv">${DB.financeiro.length}</div></div>`;
-  let items=DB.financeiro;
-  if(finFiltro==='entrada')items=items.filter(f=>f.tipo==='entrada');
-  if(finFiltro==='saida')items=items.filter(f=>f.tipo==='saida');
-  document.getElementById('fin-tb').innerHTML=items.length===0?'<tr><td colspan="6" class="empty">Sem lançamentos</td></tr>'
-    :items.slice().sort((a,b)=>b.data.localeCompare(a.data)).map(f=>`<tr>
-      <td>${new Date(f.data+'T12:00').toLocaleDateString('pt-BR')}</td>
-      <td><strong>${f.desc}</strong>${f.obs?`<br><small style="color:var(--mut)">${f.obs}</small>`:''}</td>
-      <td><span class="badge bok" style="font-size:10px">${f.cat}</span></td>
-      <td><span class="badge ${f.tipo==='entrada'?'bok':'bdanger'}">${f.tipo==='entrada'?'📥':'📤'} ${f.tipo}</span></td>
-      <td style="color:${f.tipo==='entrada'?'var(--ok)':'var(--red)'}"><strong>${f.tipo==='entrada'?'+':'-'} ${fmt(f.valor)}</strong></td>
-      <td style="display:flex;gap:5px">
-        <button class="btn bi bsm" onclick="openFinModal(${f.id})">✏️</button>
-        <button class="btn bd bsm" onclick="if(confirm('Excluir?')){DB.financeiro=DB.financeiro.filter(x=>x.id!==${f.id});saveDB();renderFin();}">🗑</button>
-      </td></tr>`).join('');
-  // chart
+    <div class="card ${totalEnt-sai>=0?'c3':'c2'}"><div class="cl">Saldo Total</div><div class="cv">${fmt(totalEnt-sai)}</div></div>`;
+
+  let items = [];
+
+  if(finFiltro==='todas' || finFiltro==='entrada' || finFiltro==='saida'){
+    // Lançamentos manuais
+    let manual = DB.financeiro;
+    if(finFiltro==='entrada') manual = manual.filter(f=>f.tipo==='entrada');
+    if(finFiltro==='saida')   manual = manual.filter(f=>f.tipo==='saida');
+    items = manual.map(f=>({
+      _tipo:'manual', id:f.id, data:f.data+'T12:00:00',
+      desc:f.desc, cat:f.cat, obs:f.obs,
+      tipo:f.tipo, valor:f.valor
+    }));
+  }
+
+  if(finFiltro==='todas' || finFiltro==='vendas'){
+    // Vendas como entradas
+    const vendasRows = DB.vendas.map(v=>({
+      _tipo:'venda', id:v.id,
+      data: v.data,
+      desc: `Venda — ${v.cliente||'Consumidor'} (${(v.itens||[]).map(i=>i.nome).join(', ')})`,
+      cat: 'Venda',
+      obs: `Vendedor: ${v.vendedor||'—'} · ${(v.pagamento||'').toUpperCase()}${v.parcelas>1?' · '+v.parcelas+'x':''}`,
+      tipo:'entrada', valor:v.total,
+      vendaObj: v
+    }));
+    items = [...items, ...vendasRows];
+  }
+
+  // Ordenar por data desc
+  items.sort((a,b)=>b.data.localeCompare(a.data));
+
+  document.getElementById('fin-tb').innerHTML = items.length===0
+    ? '<tr><td colspan="6" class="empty">Sem lançamentos</td></tr>'
+    : items.map(f=>{
+        const isVenda = f._tipo==='venda';
+        const editBtn = isVenda && isAdmin()
+          ? `<button class="btn bi bsm" onclick="abrirEditarVenda('${f.id}')" title="Editar venda">✏️</button>
+             <button class="btn bd bsm" onclick="excluirVendaDireto('${f.id}')" title="Excluir venda">🗑</button>`
+          : !isVenda
+          ? `<button class="btn bi bsm" onclick="openFinModal(${f.id})">✏️</button>
+             <button class="btn bd bsm" onclick="if(confirm('Excluir?')){DB.financeiro=DB.financeiro.filter(x=>x.id!==${f.id});saveDB();renderFin();}">🗑</button>`
+          : '';
+        return `<tr>
+          <td>${new Date(f.data).toLocaleDateString('pt-BR')}</td>
+          <td>
+            <strong>${f.desc}</strong>
+            ${f.obs?`<br><small style="color:var(--mut)">${f.obs}</small>`:''}
+            ${isVenda?'<br><span class="badge bblu" style="font-size:9px">🛒 Venda</span>':''}
+          </td>
+          <td><span class="badge bok" style="font-size:10px">${f.cat}</span></td>
+          <td><span class="badge ${f.tipo==='entrada'?'bok':'bdanger'}">${f.tipo==='entrada'?'📥':'📤'} ${f.tipo}</span></td>
+          <td style="color:${f.tipo==='entrada'?'var(--ok)':'var(--red)'}"><strong>${f.tipo==='entrada'?'+':'-'} ${fmt(f.valor)}</strong></td>
+          <td style="display:flex;gap:4px">${editBtn}</td>
+        </tr>`;
+      }).join('');
+
+  // Gráfico fluxo — inclui vendas
   const dias=10,lb=[],eA=[],sA=[];
-  for(let i=dias-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=d.toISOString().slice(0,10);lb.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));eA.push(DB.financeiro.filter(f=>f.tipo==='entrada'&&f.data===k).reduce((a,f)=>a+f.valor,0));sA.push(DB.financeiro.filter(f=>f.tipo==='saida'&&f.data===k).reduce((a,f)=>a+f.valor,0));}
-  mkChart('chartFin','bar',lb,[{label:'Entradas',data:eA,backgroundColor:'rgba(64,200,112,.6)',borderColor:'#40c870',borderWidth:1},{label:'Saídas',data:sA,backgroundColor:'rgba(224,80,96,.5)',borderColor:'#e05060',borderWidth:1}]);
+  for(let i=dias-1;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const k=d.toISOString().slice(0,10);
+    lb.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    const entDia = DB.financeiro.filter(f=>f.tipo==='entrada'&&f.data===k).reduce((a,f)=>a+f.valor,0)
+                 + DB.vendas.filter(v=>v.data.startsWith(k)).reduce((a,v)=>a+v.total,0);
+    eA.push(entDia);
+    sA.push(DB.financeiro.filter(f=>f.tipo==='saida'&&f.data===k).reduce((a,f)=>a+f.valor,0));
+  }
+  mkChart('chartFin','bar',lb,[
+    {label:'Entradas',data:eA,backgroundColor:'rgba(64,200,112,.6)',borderColor:'#40c870',borderWidth:1},
+    {label:'Saídas',data:sA,backgroundColor:'rgba(224,80,96,.5)',borderColor:'#e05060',borderWidth:1}
+  ]);
 }
 
 // ═══════════════════════════════════════════════
