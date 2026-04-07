@@ -1878,63 +1878,75 @@ function pdfEtq(){
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:Arial,sans-serif;background:#fff;}
-
-/* Página A4 sem margens para colar direto nas etiquetas */
-@page{size:A4;margin:0;}
-
-/* Grade de etiquetas: 3 colunas × N linhas
-   Cada etiqueta: 6.5cm × 2.5cm
-   3 × 6.5 = 19.5cm + espaços = cabe em A4 (21cm) com 0.75cm lateral cada */
-.pagina{
-  width:210mm;
-  padding:5mm 7.5mm;
-}
+@page{size:A4;margin:5mm 7.5mm;}
 .grid{
   display:grid;
-  grid-template-columns:repeat(3, 65mm);
-  grid-template-rows:repeat(auto-fill, 25mm);
+  grid-template-columns:repeat(3,65mm);
   gap:0;
 }
 .tag{
   width:65mm;
   height:25mm;
-  border:0.5px solid #ccc;
+  border:0.4px solid #ccc;
+  display:grid;
+  grid-template-columns:38mm 27mm;
+  align-items:center;
+  padding:1.5mm 2mm;
+  overflow:hidden;
+  page-break-inside:avoid;
+}
+/* COLUNA ESQUERDA — textos */
+.tag-left{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:0;
+  padding-right:2mm;
+  border-right:0.4px solid #ddd;
+}
+.loja{font-size:5.5pt;font-weight:700;letter-spacing:2px;color:#aaa;text-transform:uppercase;margin-bottom:1.5mm;}
+.nome{font-weight:900;font-size:8pt;text-transform:uppercase;letter-spacing:0.2px;line-height:1.2;margin-bottom:1mm;}
+.var{font-size:6pt;color:#666;margin-bottom:1.5mm;}
+.preco{font-size:12pt;font-weight:900;letter-spacing:-0.3px;color:#111;}
+
+/* COLUNA DIREITA — código de barras */
+.tag-right{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  padding:2mm 3mm;
-  text-align:center;
-  overflow:hidden;
-  page-break-inside:avoid;
+  padding-left:2mm;
+  gap:0.5mm;
 }
-.loja{font-size:6pt;font-weight:900;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:1mm;}
-.nome{font-weight:900;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.3px;line-height:1.2;margin-bottom:0.5mm;}
-.var{font-size:6.5pt;color:#555;margin-bottom:1mm;}
-.preco{font-size:13pt;font-weight:900;letter-spacing:-0.5px;margin-bottom:0.5mm;}
-.bc{display:block;margin:0 auto;}
-.cod{font-size:6pt;color:#999;letter-spacing:0.5px;margin-top:0.5mm;}
+.tag-right svg{
+  display:block;
+  width:24mm;
+  height:auto;
+}
+.cod{font-size:5pt;color:#888;letter-spacing:0.3px;text-align:center;}
 
 @media print{
-  body{margin:0;}
-  .pagina{padding:5mm 7.5mm;}
-  .tag{border:0.5px solid #bbb;}
+  .tag{border:0.4px solid #bbb;}
 }
 </style></head><body>
-<div class="pagina"><div class="grid">
+<div class="grid">
 ${all.map((t,i)=>`
 <div class="tag">
-  <div class="loja">WIN STORE</div>
-  <div class="nome">${t.p.nome.length>22?t.p.nome.substring(0,22)+'…':t.p.nome.toUpperCase()}</div>
-  <div class="var">${t.p.cor} · TAM ${t.p.tamanho}</div>
-  <div class="preco">R$ ${t.p.venda.toFixed(2).replace('.',',')}</div>
-  <svg id="bc${i}" class="bc"></svg>
-  <div class="cod">${t.cod}</div>
+  <div class="tag-left">
+    <div class="loja">WIN STORE</div>
+    <div class="nome">${t.p.nome.length>18?t.p.nome.substring(0,18)+'…':t.p.nome.toUpperCase()}</div>
+    <div class="var">${t.p.cor} · ${t.p.tamanho}</div>
+    <div class="preco">R$ ${t.p.venda.toFixed(2).replace('.',',')}</div>
+  </div>
+  <div class="tag-right">
+    <svg id="bc${i}"></svg>
+    <div class="cod">${t.cod}</div>
+  </div>
 </div>`).join('')}
-</div></div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
-  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.0,height:22,displayValue:false,background:'#ffffff',lineColor:'#111111',margin:0});}catch(e){console.log(e);}`).join('\n  ')}
+  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.4,height:45,displayValue:false,background:'#ffffff',lineColor:'#000000',margin:0});}catch(e){console.log(e);}`).join('\n  ')}
   setTimeout(function(){ window.print(); }, 800);
 });
 <\/script>
