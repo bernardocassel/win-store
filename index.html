@@ -1873,25 +1873,73 @@ function pdfEtq(){
   if(!etqLote.length){toast('Adicione etiquetas','err');return;}
   let all=[];etqLote.forEach(l=>{const cod=gerarCod(l.p);for(let i=0;i<l.qtd;i++)all.push({p:l.p,cod});});
   const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Etiquetas</title>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Etiquetas WIN Store</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;background:#fff;padding:7px;}
-.hd{text-align:center;margin-bottom:7px;padding-bottom:5px;border-bottom:2px solid #111;}
-.hd h1{font-size:15px;letter-spacing:3px;}.hd small{font-size:9px;letter-spacing:2px;color:#888;}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
-.tag{border:1.5px solid #222;border-radius:5px;padding:6px 8px;text-align:center;page-break-inside:avoid;background:#fff;}
-.nome{font-weight:900;font-size:11px;text-transform:uppercase;}
-.var{font-size:9px;color:#555;margin:1px 0;}.preco{font-size:14px;font-weight:900;margin:3px 0;}
-.cod{font-size:8px;color:#888;letter-spacing:1px;margin-top:1px;}
-svg{display:block;margin:2px auto 0;max-width:140px;}
-@media print{body{padding:2px;}.grid{gap:3px;}}</style></head><body>
-<div class="hd"><h1>WIN STORE</h1><small>ETIQUETAS</small></div>
-<div class="grid">
-${all.map((t,i)=>`<div class="tag"><div class="nome">${t.p.nome.toUpperCase()}</div><div class="var">${t.p.cor}·${t.p.tamanho}</div><div class="preco">R$${t.p.venda.toFixed(2).replace('.',',')}</div><svg id="bc${i}"></svg><div class="cod">${t.cod}</div></div>`).join('')}
-</div>
-<script>document.addEventListener('DOMContentLoaded',function(){
-${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.2,height:30,displayValue:false,background:'#fff',lineColor:'#111'});}catch(e){}`).join('\n')}
-setTimeout(function(){window.print();},600);});<\/script></body></html>`);w.document.close();
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#fff;}
+
+/* Página A4 sem margens para colar direto nas etiquetas */
+@page{size:A4;margin:0;}
+
+/* Grade de etiquetas: 3 colunas × N linhas
+   Cada etiqueta: 6.5cm × 2.5cm
+   3 × 6.5 = 19.5cm + espaços = cabe em A4 (21cm) com 0.75cm lateral cada */
+.pagina{
+  width:210mm;
+  padding:5mm 7.5mm;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3, 65mm);
+  grid-template-rows:repeat(auto-fill, 25mm);
+  gap:0;
+}
+.tag{
+  width:65mm;
+  height:25mm;
+  border:0.5px solid #ccc;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:2mm 3mm;
+  text-align:center;
+  overflow:hidden;
+  page-break-inside:avoid;
+}
+.loja{font-size:6pt;font-weight:900;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:1mm;}
+.nome{font-weight:900;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.3px;line-height:1.2;margin-bottom:0.5mm;}
+.var{font-size:6.5pt;color:#555;margin-bottom:1mm;}
+.preco{font-size:13pt;font-weight:900;letter-spacing:-0.5px;margin-bottom:0.5mm;}
+.bc{display:block;margin:0 auto;}
+.cod{font-size:6pt;color:#999;letter-spacing:0.5px;margin-top:0.5mm;}
+
+@media print{
+  body{margin:0;}
+  .pagina{padding:5mm 7.5mm;}
+  .tag{border:0.5px solid #bbb;}
+}
+</style></head><body>
+<div class="pagina"><div class="grid">
+${all.map((t,i)=>`
+<div class="tag">
+  <div class="loja">WIN STORE</div>
+  <div class="nome">${t.p.nome.length>22?t.p.nome.substring(0,22)+'…':t.p.nome.toUpperCase()}</div>
+  <div class="var">${t.p.cor} · TAM ${t.p.tamanho}</div>
+  <div class="preco">R$ ${t.p.venda.toFixed(2).replace('.',',')}</div>
+  <svg id="bc${i}" class="bc"></svg>
+  <div class="cod">${t.cod}</div>
+</div>`).join('')}
+</div></div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.0,height:22,displayValue:false,background:'#ffffff',lineColor:'#111111',margin:0});}catch(e){console.log(e);}`).join('\n  ')}
+  setTimeout(function(){ window.print(); }, 800);
+});
+<\/script>
+</body></html>`);
+  w.document.close();
 }
 
 // ═══════════════════════════════════════════════
