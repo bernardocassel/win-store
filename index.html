@@ -2111,51 +2111,42 @@ function pdfEtq(){
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:Arial,sans-serif;background:#fff;}
 
-/* A4: 210mm × 297mm
-   3 colunas × 10 linhas = 30 etiquetas por página
-   Cada etiqueta: 63mm × 25mm
-   3 × 63mm = 189mm + margens laterais = 10.5mm cada lado
-   10 × 25mm = 250mm + margens verticais = 23.5mm cada lado */
-
 @page{
   size:A4 portrait;
-  margin:24mm 10mm;
+  margin:24mm 8mm;
 }
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(3,63mm);
+  grid-template-columns:repeat(3,64mm);
   grid-template-rows:repeat(10,25mm);
   gap:0;
-  width:189mm;
+  width:192mm;
 }
 
-/* Cada etiqueta: 63mm × 25mm — layout horizontal texto|barcode */
 .tag{
-  width:63mm;
+  width:64mm;
   height:25mm;
   display:grid;
-  grid-template-columns:35mm 28mm;
-  align-items:center;
-  padding:2mm 1.5mm;
+  grid-template-columns:34mm 30mm;
+  align-items:stretch;
+  padding:0;
   overflow:hidden;
   page-break-inside:avoid;
   break-inside:avoid;
+  border:0.3px solid #ddd;
 }
-
-.tag{border:0.3px solid #e0e0e0;}
 
 .tag-left{
   display:flex;
   flex-direction:column;
   justify-content:center;
-  padding-right:1.5mm;
+  padding:2.5mm 2mm 2.5mm 3mm;
   border-right:0.3px solid #ddd;
-  height:100%;
 }
-.loja{font-size:5pt;font-weight:700;letter-spacing:1.5px;color:#bbb;text-transform:uppercase;margin-bottom:1mm;}
+.loja{font-size:4.5pt;font-weight:700;letter-spacing:1.5px;color:#bbb;text-transform:uppercase;margin-bottom:1mm;}
 .nome{font-weight:900;font-size:7pt;text-transform:uppercase;letter-spacing:0.2px;line-height:1.2;margin-bottom:0.8mm;}
-.var{font-size:5.5pt;color:#666;margin-bottom:1mm;}
+.var{font-size:5pt;color:#666;margin-bottom:1mm;}
 .preco{font-size:10.5pt;font-weight:900;letter-spacing:-0.3px;color:#111;line-height:1;}
 
 .tag-right{
@@ -2163,15 +2154,15 @@ body{font-family:Arial,sans-serif;background:#fff;}
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  padding:1.5mm 1.5mm 1.5mm 2mm;
-  height:100%;
+  padding:2.5mm 3mm 2.5mm 2mm;
   gap:0.5mm;
 }
 .tag-right svg{
   display:block;
-  width:24mm;
+  width:100%;
+  max-width:23mm;
   height:auto;
-  max-height:17mm;
+  max-height:15mm;
 }
 .cod{font-size:4pt;color:#999;letter-spacing:0.3px;text-align:center;line-height:1;}
 
@@ -2196,7 +2187,7 @@ ${all.map((t,i)=>`<div class="tag">
 </div>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
-  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.0,height:36,displayValue:false,background:'#ffffff',lineColor:'#000000',margin:1});}catch(e){console.log(e);}`).join('\n  ')}
+  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:0.9,height:32,displayValue:false,background:'#ffffff',lineColor:'#000000',margin:2});}catch(e){console.log(e);}`).join('\n  ')}
   setTimeout(function(){ window.print(); }, 900);
 });
 <\/script>
