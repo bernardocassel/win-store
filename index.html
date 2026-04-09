@@ -2113,37 +2113,36 @@ body{font-family:Arial,sans-serif;background:#fff;}
 
 /* A4: 210mm × 297mm
    3 colunas × 10 linhas = 30 etiquetas por página
-   Cada etiqueta: 65mm × 25mm
-   3 × 65mm = 195mm + margens laterais = 7.5mm cada lado
+   Cada etiqueta: 63mm × 25mm
+   3 × 63mm = 189mm + margens laterais = 10.5mm cada lado
    10 × 25mm = 250mm + margens verticais = 23.5mm cada lado */
 
 @page{
   size:A4 portrait;
-  margin:23.5mm 7.5mm;
+  margin:24mm 10mm;
 }
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(3,65mm);
+  grid-template-columns:repeat(3,63mm);
   grid-template-rows:repeat(10,25mm);
   gap:0;
-  width:195mm;
+  width:189mm;
 }
 
-/* Cada etiqueta: 65mm × 25mm — layout horizontal texto|barcode */
+/* Cada etiqueta: 63mm × 25mm — layout horizontal texto|barcode */
 .tag{
-  width:65mm;
+  width:63mm;
   height:25mm;
   display:grid;
-  grid-template-columns:37mm 28mm;
+  grid-template-columns:35mm 28mm;
   align-items:center;
-  padding:1.5mm 1.5mm;
+  padding:2mm 1.5mm;
   overflow:hidden;
   page-break-inside:avoid;
   break-inside:avoid;
 }
 
-/* linha separadora entre etiquetas (visual, não borda real) */
 .tag{border:0.3px solid #e0e0e0;}
 
 .tag-left{
@@ -2155,26 +2154,26 @@ body{font-family:Arial,sans-serif;background:#fff;}
   height:100%;
 }
 .loja{font-size:5pt;font-weight:700;letter-spacing:1.5px;color:#bbb;text-transform:uppercase;margin-bottom:1mm;}
-.nome{font-weight:900;font-size:7.5pt;text-transform:uppercase;letter-spacing:0.2px;line-height:1.2;margin-bottom:0.8mm;}
+.nome{font-weight:900;font-size:7pt;text-transform:uppercase;letter-spacing:0.2px;line-height:1.2;margin-bottom:0.8mm;}
 .var{font-size:5.5pt;color:#666;margin-bottom:1mm;}
-.preco{font-size:11pt;font-weight:900;letter-spacing:-0.3px;color:#111;line-height:1;}
+.preco{font-size:10.5pt;font-weight:900;letter-spacing:-0.3px;color:#111;line-height:1;}
 
 .tag-right{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  padding-left:1.5mm;
+  padding:1.5mm 1.5mm 1.5mm 2mm;
   height:100%;
   gap:0.5mm;
 }
 .tag-right svg{
   display:block;
-  width:25mm;
+  width:24mm;
   height:auto;
-  max-height:18mm;
+  max-height:17mm;
 }
-.cod{font-size:4.5pt;color:#999;letter-spacing:0.3px;text-align:center;line-height:1;}
+.cod{font-size:4pt;color:#999;letter-spacing:0.3px;text-align:center;line-height:1;}
 
 @media print{
   body{margin:0;}
@@ -2197,7 +2196,7 @@ ${all.map((t,i)=>`<div class="tag">
 </div>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
-  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.1,height:40,displayValue:false,background:'#ffffff',lineColor:'#000000',margin:0});}catch(e){console.log(e);}`).join('\n  ')}
+  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:1.0,height:36,displayValue:false,background:'#ffffff',lineColor:'#000000',margin:1});}catch(e){console.log(e);}`).join('\n  ')}
   setTimeout(function(){ window.print(); }, 900);
 });
 <\/script>
