@@ -1480,40 +1480,56 @@ function salvarCompra(){
 // PDV — SCANNER
 // ═══════════════════════════════════════════════
 function focusScan(){ setTimeout(()=>document.getElementById('scan-inp')?.focus(),150); }
+
 function scanKey(e){
   if(e.key==='Enter'){
     const v=document.getElementById('scan-inp').value.trim();
-    if(v) scanCode(v);
+    if(v.length>=3) scanCode(v);
     document.getElementById('scan-inp').value='';
+    e.preventDefault();
   }
 }
+
 function scanInp(){
   clearTimeout(scanTimer);
   const v=document.getElementById('scan-inp').value;
-  if(v.length>=9){ scanTimer=setTimeout(()=>{scanCode(v);document.getElementById('scan-inp').value='';},80); }
+  // Timer maior (150ms) para leitoras mais lentas completarem o envio
+  if(v.length>=8){
+    scanTimer=setTimeout(()=>{
+      const val=document.getElementById('scan-inp').value.trim();
+      if(val.length>=8){ scanCode(val); document.getElementById('scan-inp').value=''; }
+    },150);
+  }
 }
+
 function scanCode(code){
-  const cl = code.trim().replace(/\D/g,''); // só números
-  const st = document.getElementById('scan-st');
-  // Busca pelo código EAN-13 gerado atualmente
-  const found = DB.estoque.filter(e=>e.quantidade>0).find(e=>{
-    const cod = gerarCod(e);
-    return cod === cl           // match exato EAN-13
-        || cod === code.trim()  // match com possível formatação
-        || cod.slice(0,-1) === cl  // match ignorando dígito verificador (12 dígitos antigos)
-        || cl.slice(0,-1) === cod.slice(0,-1); // match nos 12 primeiros
+  const cl=code.trim().replace(/\D/g,''); // só números
+  const st=document.getElementById('scan-st');
+
+  if(!cl){ return; }
+
+  // Busca flexível: tenta vários modos de match
+  const found=DB.estoque.filter(e=>e.quantidade>0).find(e=>{
+    const cod=gerarCod(e);
+    return cod===cl                    // EAN-13 exato (13 dígitos)
+        || cod===code.trim()           // com possível formatação
+        || cod.slice(0,12)===cl.slice(0,12) // ignora dígito verificador
+        || cod.slice(-9)===cl.slice(-9);    // match nos últimos 9 dígitos
   });
+
   if(found){
     addToCart(found.id);
     st.textContent='✓ '+found.nome+' ('+found.tamanho+')';
     st.style.color='var(--ok)';
-    setTimeout(()=>{st.textContent='Pronto';st.style.color='var(--blu)';},1500);
+    setTimeout(()=>{st.textContent='Pronto ✓';st.style.color='var(--blu)';},2000);
     toast(`✅ ${found.nome} (${found.cor}/${found.tamanho}) adicionado!`);
   } else {
-    st.textContent='✗ Código não encontrado';
+    // Mostra o código lido para facilitar diagnóstico
+    st.textContent='✗ Não encontrado: '+cl;
     st.style.color='var(--red)';
-    setTimeout(()=>{st.textContent='Pronto';st.style.color='var(--blu)';},2000);
+    setTimeout(()=>{st.textContent='Pronto';st.style.color='var(--blu)';},3000);
     toast('Código não encontrado: '+cl,'err');
+    console.warn('[SCAN] Código não encontrado:', cl, '| Estoque disponível:', DB.estoque.filter(e=>e.quantidade>0).map(e=>gerarCod(e)));
   }
 }
 
@@ -2095,7 +2111,7 @@ function prevEtq(){
   document.getElementById('pr-var').textContent=p.cor+' · Tam: '+p.tamanho;
   document.getElementById('pr-preco').textContent='R$ '+p.venda.toFixed(2).replace('.',',');
   const cod=gerarCod(p);document.getElementById('pr-cod').textContent=cod;
-  try{JsBarcode('#pr-bc',cod,{format:'CODE128',width:1.5,height:38,displayValue:false,background:'#fff',lineColor:'#111'});}catch(e){}
+  try{JsBarcode('#pr-bc',cod,{format:'EAN13',width:1.5,height:38,displayValue:true,fontSize:9,font:'Arial',textMargin:1,background:'#fff',lineColor:'#111'});}catch(e){}
 }
 function addEtqLote(){
   const id=document.getElementById('etq-sel').value;
@@ -2208,7 +2224,7 @@ ${all.map((t,i)=>`<div class="tag">
 </div>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
-  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'CODE128',width:0.9,height:32,displayValue:false,background:'#ffffff',lineColor:'#000000',margin:2});}catch(e){console.log(e);}`).join('\n  ')}
+  ${all.map((t,i)=>`try{JsBarcode('#bc${i}','${t.cod}',{format:'EAN13',width:1.5,height:36,displayValue:true,fontSize:8,font:'Arial',textMargin:1,background:'#ffffff',lineColor:'#000000',margin:2});}catch(e){console.log('bc${i} err',e);}`).join('\n  ')}
   setTimeout(function(){ window.print(); }, 900);
 });
 <\/script>
