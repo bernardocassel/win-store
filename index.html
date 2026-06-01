@@ -574,22 +574,58 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div class="ph">
     <div><h2>Vendas</h2><small id="vendas-count"></small></div>
     <div class="phacts">
-      <select id="vendas-per" onchange="renderVendas()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:7px 11px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;">
-        <option value="hoje">Hoje</option>
-        <option value="7">7 dias</option>
-        <option value="30" selected>30 dias</option>
-        <option value="90">90 dias</option>
-        <option value="todos">Todas</option>
-      </select>
-      <input type="text" id="vendas-busca" placeholder="🔍 Buscar..." oninput="renderVendas()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:7px 11px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;width:200px;"/>
+      <input type="text" id="vendas-busca" placeholder="🔍 Buscar cliente, vendedor..." oninput="renderVendas()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:7px 11px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;width:200px;"/>
     </div>
   </div>
+
+  <!-- FILTROS DE PERÍODO -->
+  <div style="background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:14px 18px;margin-bottom:18px;">
+    <div style="font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:600;">Filtrar por período</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="vendas-filtros-rapidos">
+      <!-- gerado por JS -->
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="font-size:11px;color:var(--mut)">Ou escolha um intervalo:</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="vendas-de" onchange="vendas_setCustom()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:6px 10px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;"/>
+        <span style="color:var(--mut);font-size:12px">até</span>
+        <input type="date" id="vendas-ate" onchange="vendas_setCustom()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:6px 10px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;"/>
+      </div>
+    </div>
+  </div>
+
   <div class="cards" id="vendas-cards"></div>
   <div class="tw">
     <table>
       <thead><tr><th>Data/Hora</th><th>Vendedor</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Total</th><th>Lucro</th><th></th></tr></thead>
       <tbody id="vendas-tb"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- INVESTIMENTO -->
+<div class="page" id="page-investimento">
+  <div class="ph">
+    <div><h2>Investimento</h2><small>Compras de estoque e custos</small></div>
+    <button class="btn bp" onclick="openModalInvest()">+ Nova Compra</button>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
+    <div id="invest-filtros" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <select id="invest-ano" onchange="renderInvestimento()" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:7px 11px;color:var(--txt);font-family:inherit;font-size:12px;outline:none;"></select>
+  </div>
+  <div class="cards" id="invest-cards"></div>
+  <div class="cgrid" style="margin-bottom:18px">
+    <div class="ccard"><h3>Investimento Mensal (R$)</h3><canvas id="chartInvest" style="max-height:220px"></canvas></div>
+    <div class="ccard"><h3>Distribuição de Custos</h3><canvas id="chartInvestDist" style="max-height:220px"></canvas></div>
+  </div>
+  <div class="fsec" style="margin-top:0">
+    <h3>📋 Histórico de Compras</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Custo Unit.</th><th>Frete</th><th>Extras</th><th>Total</th><th></th></tr></thead>
+        <tbody id="invest-tb"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -858,6 +894,43 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </div></div>
 
+<!-- MODAL INVESTIMENTO -->
+<div class="mo" id="mo-invest"><div class="md" style="max-width:540px">
+  <h3 id="inv-title">💰 Nova Compra de Estoque</h3>
+  <div class="fgrid">
+    <div class="fg" style="grid-column:1/-1"><label>Nome do Produto *</label><input type="text" id="inv-nome" placeholder="ex: Camisas Básicas, Calças Jeans..."/></div>
+    <div class="fg"><label>Data da Compra *</label><input type="date" id="inv-data"/></div>
+    <div class="fg"><label>Fornecedor</label><input type="text" id="inv-forn" placeholder="Nome do fornecedor..."/></div>
+    <div class="fg"><label>Quantidade</label><input type="number" id="inv-qtd" placeholder="0" min="1" oninput="calcTotalInvest()"/></div>
+    <div class="fg"><label>Custo por Produto (R$)</label><input type="number" id="inv-custo-un" placeholder="0,00" step="0.01" min="0" oninput="calcTotalInvest()"/></div>
+    <div class="fg"><label>Custo Total Produtos (R$)</label><input type="number" id="inv-custo-tot" placeholder="Calculado auto" step="0.01" min="0" oninput="calcTotalInvest()" style="color:var(--gold)"/></div>
+    <div class="fg"><label>Custo de Frete (R$)</label><input type="number" id="inv-frete" placeholder="0,00" step="0.01" min="0" oninput="calcTotalInvest()"/></div>
+    <div class="fg"><label>Custos Adicionais (R$)</label><input type="number" id="inv-extras" placeholder="0,00" step="0.01" min="0" oninput="calcTotalInvest()"/></div>
+    <div class="fg" style="grid-column:1/-1"><label>Descrição dos Extras</label><input type="text" id="inv-extras-desc" placeholder="ex: Embalagem, Taxa, Imposto..."/></div>
+    <div class="fg"><label>Forma de Pagamento</label>
+      <select id="inv-pag">
+        <option value="dinheiro">Dinheiro</option><option value="pix">PIX</option>
+        <option value="cartao">Cartão</option><option value="boleto">Boleto</option><option value="prazo">A prazo</option>
+      </select>
+    </div>
+    <div class="fg"><label>Observação</label><input type="text" id="inv-obs" placeholder="Notas..."/></div>
+  </div>
+  <div style="background:var(--surf2);border-radius:var(--rs);padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:4px">Custo unitário final:</div>
+      <div id="inv-custo-un-final" style="font-size:13px;color:var(--mut)">—</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:var(--mut);margin-bottom:4px">INVESTIMENTO TOTAL:</div>
+      <div id="inv-total-preview" style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--red)">R$ 0,00</div>
+    </div>
+  </div>
+  <div class="macts">
+    <button class="btn bs" onclick="closeMo('mo-invest')">Cancelar</button>
+    <button class="btn bp" onclick="salvarInvest()">💾 Salvar</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -934,6 +1007,7 @@ function initFirebase(){
         DB.clientes   = data.clientes   || [];
         DB.vendedores = data.vendedores || [];
         DB.config     = data.config     || {metaMes:30000,metaDia:1500};
+        DB.investimentos = data.investimentos || [];
         localStorage.setItem('winstore5', JSON.stringify(DB));
         if(U) refreshCurrentPage();
       }
@@ -957,9 +1031,10 @@ function loadLocalDB(){
     const s = localStorage.getItem('winstore5');
     if(s){ const p=JSON.parse(s); Object.assign(DB,p); }
   }catch(e){}
-  if(!DB.vendedores) DB.vendedores=[];
-  if(!DB.clientes)   DB.clientes=[];
-  if(!DB.config)     DB.config={metaMes:30000,metaDia:1500};
+  if(!DB.vendedores)    DB.vendedores=[];
+  if(!DB.clientes)      DB.clientes=[];
+  if(!DB.config)        DB.config={metaMes:30000,metaDia:1500};
+  if(!DB.investimentos) DB.investimentos=[];
 }
 
 function loadDB(){
@@ -980,7 +1055,8 @@ function saveDB(){
       financeiro: DB.financeiro,
       clientes:   DB.clientes,
       vendedores: DB.vendedores,
-      config:     DB.config||{}
+      config:     DB.config||{},
+      investimentos: DB.investimentos||[]
     }).then(()=>{
       showSyncStatus('sincronizado ✓', true);
     }).catch(err=>{
@@ -1005,6 +1081,7 @@ function refreshCurrentPage(){
     'dashboard':renderDash,'meu-dash':renderMeuDash,'estoque':renderEstoque,
     'vendas':renderVendas,
     'cobrancas':()=>renderCob(cobFiltro),'clientes':renderClientes,
+    'investimento':renderInvestimento,
     'financeiro':renderFin,'relatorios':renderRel,'equipe':renderEquipe
   };
   if(fns[id]) fns[id]();
@@ -1086,6 +1163,7 @@ function buildSidebar(){
     {id:'vendas',ic:'💵',lb:'Vendas'},
     {id:'cobrancas',ic:'💳',lb:'Cobranças',badge:'cob-badge'},
     {id:'clientes',ic:'👥',lb:'Clientes'},
+    {id:'investimento',ic:'📥',lb:'Investimento'},
     {id:'financeiro',ic:'💰',lb:'Financeiro'},
     {id:'etiquetas',ic:'🏷️',lb:'Etiquetas'},
     {id:'relatorios',ic:'📈',lb:'Relatórios'},
@@ -1121,6 +1199,7 @@ function goPage(id){
     'compra':()=>{ novasVars=[]; renderVarList(); calcTotalCompra(); },
     'vendas':renderVendas,
     'pdv':initPDV,'cobrancas':()=>renderCob('pendente'),'clientes':renderClientes,
+    'investimento':renderInvestimento,
     'financeiro':renderFin,'etiquetas':initEtq,'relatorios':renderRel,'equipe':renderEquipe
   };
   if(fns[id]) fns[id]();
@@ -1928,52 +2007,129 @@ function filFin(f,el){
 // ═══════════════════════════════════════════════
 // VENDAS
 // ═══════════════════════════════════════════════
-function renderVendas(){
-  const per = document.getElementById('vendas-per')?.value||'30';
-  const busca = (document.getElementById('vendas-busca')?.value||'').toLowerCase();
-  let vendas = [...DB.vendas];
-  // Filtro período
-  if(per === 'hoje'){
-    const hoje = new Date().toISOString().slice(0,10);
-    vendas = vendas.filter(v=>v.data.startsWith(hoje));
-  } else if(per !== 'todos'){
-    const corte = new Date(); corte.setDate(corte.getDate()-parseInt(per));
-    vendas = vendas.filter(v=>new Date(v.data)>=corte);
+// ═══════════════════════════════════════════════
+// VENDAS — filtros por mês/data
+// ═══════════════════════════════════════════════
+let vendasFiltroAtivo = 'mes_atual'; // 'mes_atual', 'YYYY-MM', 'custom', 'todos'
+
+function vendas_initFiltros(){
+  const wrap = document.getElementById('vendas-filtros-rapidos');
+  if(!wrap) return;
+  const now = new Date();
+  const meses = [];
+  // Hoje + últimos 6 meses + todos
+  meses.push({val:'hoje', lb:'Hoje'});
+  meses.push({val:'semana', lb:'Esta semana'});
+  for(let i=0;i<6;i++){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const val = d.toISOString().slice(0,7);
+    const lb = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    meses.push({val, lb: lb.charAt(0).toUpperCase()+lb.slice(1)});
   }
+  meses.push({val:'todos', lb:'Todas'});
+
+  wrap.innerHTML = meses.map(m=>`
+    <button onclick="vendas_setFiltro('${m.val}')" id="vfbtn-${m.val.replace('-','_')}"
+      style="padding:5px 14px;border-radius:99px;border:1px solid var(--bord);background:var(--surf2);color:var(--mut);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;"
+      onmouseover="this.style.color='var(--txt)'" onmouseout="if(vendasFiltroAtivo!=='${m.val}')this.style.color='var(--mut)'">
+      ${m.lb}
+    </button>`).join('');
+
+  // Definir mês atual como ativo
+  const mesAtualVal = now.toISOString().slice(0,7);
+  vendasFiltroAtivo = mesAtualVal;
+  vendas_highlightFiltro(mesAtualVal);
+
+  // Datas padrão do intervalo
+  const primeiroDia = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  const hoje = now.toISOString().slice(0,10);
+  const deEl = document.getElementById('vendas-de');
+  const ateEl = document.getElementById('vendas-ate');
+  if(deEl) deEl.value = primeiroDia;
+  if(ateEl) ateEl.value = hoje;
+}
+
+function vendas_setFiltro(val){
+  vendasFiltroAtivo = val;
+  vendas_highlightFiltro(val);
+  renderVendas();
+}
+
+function vendas_setCustom(){
+  vendasFiltroAtivo = 'custom';
+  // Remover highlight de todos os botões
+  document.querySelectorAll('#vendas-filtros-rapidos button').forEach(b=>{
+    b.style.background='var(--surf2)'; b.style.color='var(--mut)'; b.style.borderColor='var(--bord)';
+  });
+  renderVendas();
+}
+
+function vendas_highlightFiltro(val){
+  document.querySelectorAll('#vendas-filtros-rapidos button').forEach(b=>{
+    b.style.background='var(--surf2)'; b.style.color='var(--mut)'; b.style.borderColor='var(--bord)';
+  });
+  const safe = val.replace('-','_');
+  const btn = document.getElementById('vfbtn-'+safe);
+  if(btn){ btn.style.background='var(--gold)'; btn.style.color='#111'; btn.style.borderColor='var(--gold)'; }
+}
+
+function renderVendas(){
+  // Init filtros na primeira chamada
+  const wrap = document.getElementById('vendas-filtros-rapidos');
+  if(wrap && !wrap.children.length) vendas_initFiltros();
+
+  const busca = (document.getElementById('vendas-busca')?.value||'').toLowerCase();
+  const now = new Date();
+  let vendas = [...DB.vendas];
+
+  // Aplicar filtro de período
+  if(vendasFiltroAtivo==='hoje'){
+    const hoje=now.toISOString().slice(0,10);
+    vendas=vendas.filter(v=>v.data.startsWith(hoje));
+  } else if(vendasFiltroAtivo==='semana'){
+    const start=new Date(now);start.setDate(now.getDate()-now.getDay());
+    vendas=vendas.filter(v=>new Date(v.data)>=start);
+  } else if(vendasFiltroAtivo==='custom'){
+    const de  = document.getElementById('vendas-de')?.value;
+    const ate = document.getElementById('vendas-ate')?.value;
+    if(de)  vendas=vendas.filter(v=>v.data.slice(0,10)>=de);
+    if(ate) vendas=vendas.filter(v=>v.data.slice(0,10)<=ate);
+  } else if(vendasFiltroAtivo!=='todos' && vendasFiltroAtivo.match(/^\d{4}-\d{2}$/)){
+    vendas=vendas.filter(v=>v.data.startsWith(vendasFiltroAtivo));
+  }
+
   // Filtro busca
-  if(busca) vendas = vendas.filter(v=>
-    (v.cliente||'').toLowerCase().includes(busca) ||
-    (v.vendedor||'').toLowerCase().includes(busca) ||
+  if(busca) vendas=vendas.filter(v=>
+    (v.cliente||'').toLowerCase().includes(busca)||
+    (v.vendedor||'').toLowerCase().includes(busca)||
     (v.pagamento||'').toLowerCase().includes(busca)
   );
-  // Ordenar mais recentes primeiro
+
   vendas.sort((a,b)=>b.data.localeCompare(a.data));
+  const tot=vendas.reduce((a,v)=>a+v.total,0);
+  const cus=vendas.reduce((a,v)=>a+v.custo,0);
+  const lucro=tot-cus;
 
-  const tot = vendas.reduce((a,v)=>a+v.total,0);
-  const cus = vendas.reduce((a,v)=>a+v.custo,0);
-  const lucro = tot-cus;
-
-  document.getElementById('vendas-count').textContent = `${vendas.length} venda(s) encontrada(s)`;
-  document.getElementById('vendas-cards').innerHTML = `
+  document.getElementById('vendas-count').textContent=`${vendas.length} venda(s) encontrada(s)`;
+  document.getElementById('vendas-cards').innerHTML=`
     <div class="card c1"><div class="cl">Receita Total</div><div class="cv">${fmt(tot)}</div></div>
     <div class="card c2"><div class="cl">Custo Total</div><div class="cv">${fmt(cus)}</div></div>
     <div class="card c3"><div class="cl">Lucro</div><div class="cv">${fmt(lucro)}</div></div>
     <div class="card c4"><div class="cl">Nº de Vendas</div><div class="cv">${vendas.length}</div></div>
     <div class="card c1"><div class="cl">Ticket Médio</div><div class="cv">${fmt(vendas.length?tot/vendas.length:0)}</div></div>`;
 
-  const tb = document.getElementById('vendas-tb');
-  if(!vendas.length){ tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma venda encontrada</td></tr>'; return; }
-
-  tb.innerHTML = vendas.map(v=>{
-    const l = v.total-v.custo;
-    const adminBtns = isAdmin()?`
+  const tb=document.getElementById('vendas-tb');
+  if(!vendas.length){tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma venda encontrada</td></tr>';return;}
+  tb.innerHTML=vendas.map(v=>{
+    const l=v.total-v.custo;
+    const adminBtns=isAdmin()?`
       <button class="btn bi bsm" onclick="abrirEditarVenda('${v.id}')" title="Editar">✏️</button>
       <button class="btn bd bsm" onclick="excluirVendaDireto('${v.id}')" title="Excluir">🗑</button>`:'';
     return `<tr>
       <td style="white-space:nowrap">
         ${new Date(v.data).toLocaleDateString('pt-BR')}<br>
         <small style="color:var(--mut)">${new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</small>
-        ${v.retroativo?'<br><span class="badge bwarn" style="font-size:9px">Retroativa</span>':''}
+        ${v.retroativo?'<br><span class="badge bwarn" style="font-size:9px">Retro</span>':''}
         ${v.editadoEm?'<br><span class="badge bblu" style="font-size:9px">Editada</span>':''}
       </td>
       <td style="color:var(--grn)">${v.vendedor||'—'}</td>
@@ -1982,7 +2138,7 @@ function renderVendas(){
       <td><span class="badge bok">${(v.pagamento||'').toUpperCase()}</span>${v.parcelas>1?'<br><small style="color:var(--mut)">'+v.parcelas+'x '+fmt(v.total/v.parcelas)+'</small>':''}</td>
       <td style="color:var(--gold);font-weight:700">${fmt(v.total)}</td>
       <td style="color:${l>=0?'var(--ok)':'var(--red)'}">
-        ${fmt(l)}<br><small style="color:var(--mut)">${tot>0?((l/v.total)*100).toFixed(0):0}%</small>
+        ${fmt(l)}<br><small style="color:var(--mut)">${v.total>0?((l/v.total)*100).toFixed(0):0}%</small>
       </td>
       <td style="display:flex;gap:4px;white-space:nowrap">
         <button class="btn bi bsm" onclick="comprovante('${v.id}')" title="Comprovante">🖨</button>
@@ -1990,6 +2146,178 @@ function renderVendas(){
       </td>
     </tr>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// INVESTIMENTO
+// ═══════════════════════════════════════════════
+let editInvestId = null;
+const MESES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function invest_initAno(){
+  const sel=document.getElementById('invest-ano');if(!sel)return;
+  const now=new Date();sel.innerHTML='';
+  for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){
+    sel.innerHTML+=`<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`;
+  }
+}
+
+function invest_initFiltros(){
+  const wrap=document.getElementById('invest-filtros');if(!wrap)return;
+  const now=new Date();
+  const items=[{val:'todos',lb:'Todos'},...MESES_NOMES.map((m,i)=>({val:String(i+1).padStart(2,'0'),lb:m}))];
+  const mesPadrao=String(now.getMonth()+1).padStart(2,'0');
+  wrap.innerHTML=items.map(m=>`
+    <button onclick="invest_setMes('${m.val}')" id="ibtn-${m.val}"
+      style="padding:4px 12px;border-radius:99px;border:1px solid var(--bord);background:${m.val===mesPadrao?'var(--gold)':m.val==='todos'&&mesPadrao==='todos'?'var(--gold)':'var(--surf2)'};color:${m.val===mesPadrao?'#111':m.val==='todos'&&mesPadrao==='todos'?'#111':'var(--mut)'};font-size:11px;cursor:pointer;white-space:nowrap;">
+      ${m.lb}
+    </button>`).join('');
+  window._investMesFiltro = mesPadrao;
+}
+
+function invest_setMes(val){
+  window._investMesFiltro=val;
+  document.querySelectorAll('[id^="ibtn-"]').forEach(b=>{
+    b.style.background='var(--surf2)';b.style.color='var(--mut)';
+  });
+  const btn=document.getElementById('ibtn-'+val);
+  if(btn){btn.style.background='var(--gold)';btn.style.color='#111';}
+  renderInvestimento();
+}
+
+function openModalInvest(id){
+  editInvestId=id||null;
+  document.getElementById('inv-title').textContent=id?'✏️ Editar Compra':'💰 Nova Compra de Estoque';
+  document.getElementById('inv-data').value=new Date().toISOString().slice(0,10);
+  if(id){
+    const inv=DB.investimentos.find(x=>x.id===id);
+    if(inv){
+      document.getElementById('inv-nome').value=inv.nome||'';
+      document.getElementById('inv-data').value=inv.data||'';
+      document.getElementById('inv-forn').value=inv.fornecedor||'';
+      document.getElementById('inv-qtd').value=inv.qtd||'';
+      document.getElementById('inv-custo-un').value=inv.custoUn||'';
+      document.getElementById('inv-custo-tot').value=inv.custoTot||'';
+      document.getElementById('inv-frete').value=inv.frete||0;
+      document.getElementById('inv-extras').value=inv.extras||0;
+      document.getElementById('inv-extras-desc').value=inv.extrasDesc||'';
+      document.getElementById('inv-pag').value=inv.pagamento||'dinheiro';
+      document.getElementById('inv-obs').value=inv.obs||'';
+    }
+  } else {
+    ['inv-nome','inv-forn','inv-qtd','inv-custo-un','inv-custo-tot','inv-obs','inv-extras-desc'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('inv-frete').value=0;
+    document.getElementById('inv-extras').value=0;
+  }
+  calcTotalInvest();
+  document.getElementById('mo-invest').classList.add('open');
+}
+
+function calcTotalInvest(){
+  const qtd=parseFloat(document.getElementById('inv-qtd')?.value)||0;
+  const un=parseFloat(document.getElementById('inv-custo-un')?.value)||0;
+  const totProd=parseFloat(document.getElementById('inv-custo-tot')?.value)||(qtd*un);
+  // Se digitou qtd e custo unitário, calcular custo total automaticamente
+  if(qtd>0 && un>0){
+    const calc=qtd*un;
+    document.getElementById('inv-custo-tot').value=calc.toFixed(2);
+  }
+  const frete=parseFloat(document.getElementById('inv-frete')?.value)||0;
+  const extras=parseFloat(document.getElementById('inv-extras')?.value)||0;
+  const total=totProd+frete+extras;
+  const elTot=document.getElementById('inv-total-preview');
+  if(elTot) elTot.textContent=fmt(total);
+  const elUn=document.getElementById('inv-custo-un-final');
+  if(elUn&&qtd>0) elUn.textContent='Custo final/unidade: '+fmt(total/qtd);
+  else if(elUn) elUn.textContent='—';
+}
+
+function salvarInvest(){
+  const nome=document.getElementById('inv-nome').value.trim();
+  if(!nome){toast('Informe o nome do produto','err');return;}
+  const qtd=parseFloat(document.getElementById('inv-qtd').value)||0;
+  const custoUn=parseFloat(document.getElementById('inv-custo-un').value)||0;
+  const custoTot=parseFloat(document.getElementById('inv-custo-tot').value)||(qtd*custoUn);
+  const frete=parseFloat(document.getElementById('inv-frete').value)||0;
+  const extras=parseFloat(document.getElementById('inv-extras').value)||0;
+  const total=custoTot+frete+extras;
+  const data=document.getElementById('inv-data').value||new Date().toISOString().slice(0,10);
+  const dados={
+    nome, qtd, custoUn, custoTot, frete, extras,
+    total, data,
+    fornecedor:document.getElementById('inv-forn').value.trim(),
+    extrasDesc:document.getElementById('inv-extras-desc').value.trim(),
+    pagamento:document.getElementById('inv-pag').value,
+    obs:document.getElementById('inv-obs').value.trim()
+  };
+  if(editInvestId){
+    const inv=DB.investimentos.find(x=>x.id===editInvestId);
+    if(inv) Object.assign(inv,dados);
+  } else {
+    dados.id=Date.now();
+    DB.investimentos.push(dados);
+  }
+  saveDB();closeMo('mo-invest');renderInvestimento();
+  toast('✅ Compra salva! Total: '+fmt(total));
+}
+
+function renderInvestimento(){
+  if(!DB.investimentos) DB.investimentos=[];
+  invest_initAno();
+  const wrap=document.getElementById('invest-filtros');
+  if(wrap&&!wrap.children.length) invest_initFiltros();
+
+  const ano=parseInt(document.getElementById('invest-ano')?.value)||new Date().getFullYear();
+  const mes=window._investMesFiltro||String(new Date().getMonth()+1).padStart(2,'0');
+
+  let items=[...DB.investimentos];
+  // Filtrar por ano
+  items=items.filter(x=>x.data&&x.data.startsWith(String(ano)));
+  // Filtrar por mês
+  if(mes!=='todos') items=items.filter(x=>x.data&&x.data.slice(5,7)===mes);
+  items.sort((a,b)=>b.data.localeCompare(a.data));
+
+  const totalInvest=items.reduce((a,x)=>a+x.total,0);
+  const totalFrete=items.reduce((a,x)=>a+x.frete,0);
+  const totalExtras=items.reduce((a,x)=>a+x.extras,0);
+  const totalProd=items.reduce((a,x)=>a+x.custoTot,0);
+  const totalQtd=items.reduce((a,x)=>a+(x.qtd||0),0);
+
+  document.getElementById('invest-cards').innerHTML=`
+    <div class="card c2"><div class="cl">Total Investido</div><div class="cv">${fmt(totalInvest)}</div></div>
+    <div class="card c1"><div class="cl">Custo Produtos</div><div class="cv">${fmt(totalProd)}</div></div>
+    <div class="card c4"><div class="cl">Frete Total</div><div class="cv">${fmt(totalFrete)}</div></div>
+    <div class="card c3"><div class="cl">Extras</div><div class="cv">${fmt(totalExtras)}</div></div>
+    <div class="card c2"><div class="cl">Unidades Compradas</div><div class="cv">${totalQtd}</div></div>`;
+
+  // Gráfico mensal — 6 meses do ano selecionado
+  const lbls=[],vA=[];
+  for(let m=1;m<=12;m++){
+    const mk=String(ano)+'-'+String(m).padStart(2,'0');
+    lbls.push(MESES_NOMES[m-1].slice(0,3));
+    vA.push(DB.investimentos.filter(x=>x.data&&x.data.startsWith(mk)).reduce((a,x)=>a+x.total,0));
+  }
+  mkChart('chartInvest','bar',lbls,[{label:'Investimento R$',data:vA,backgroundColor:'rgba(224,80,96,.6)',borderColor:'#e05060',borderWidth:1}]);
+
+  // Gráfico distribuição
+  mkChart('chartInvestDist','doughnut',['Produtos','Frete','Extras'],[{data:[totalProd,totalFrete,totalExtras],backgroundColor:['#6080f0','#f0c040','#e07040']}]);
+
+  // Tabela
+  const tb=document.getElementById('invest-tb');
+  if(!items.length){tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma compra neste período</td></tr>';return;}
+  tb.innerHTML=items.map(x=>`<tr>
+    <td>${new Date(x.data+'T12:00').toLocaleDateString('pt-BR')}</td>
+    <td><strong>${x.nome}</strong>${x.fornecedor?'<br><small style="color:var(--mut)">'+x.fornecedor+'</small>':''}</td>
+    <td>${x.qtd||'—'}</td>
+    <td>${fmt(x.custoUn)}</td>
+    <td style="color:var(--gold)">${fmt(x.frete)}</td>
+    <td>${fmt(x.extras)}${x.extrasDesc?'<br><small style="color:var(--mut)">'+x.extrasDesc+'</small>':''}</td>
+    <td style="color:var(--red);font-weight:700">${fmt(x.total)}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn bi bsm" onclick="openModalInvest(${x.id})">✏️</button>
+      <button class="btn bd bsm" onclick="if(confirm('Excluir?')){DB.investimentos=DB.investimentos.filter(i=>i.id!==${x.id});saveDB();renderInvestimento();}">🗑</button>
+    </td>
+  </tr>`).join('');
 }
 
 function renderFin(){
